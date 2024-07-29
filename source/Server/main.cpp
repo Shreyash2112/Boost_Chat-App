@@ -1,33 +1,11 @@
 #include <iostream>
-#include <boost/asio.hpp>
+#include <Networking/server/tcp_server.h>
 
-using namespace std;
-using boost::asio::ip::tcp;
 
 int main () {
+    
+    BCA::TCPServer server {BCA::IPV::V4, 55555};
 
-    try {
-
-        cout << "Accepting connection on port 55555 \n";
-        boost::asio::io_context io_context;
-
-        tcp::acceptor acceptor(io_context, tcp::endpoint(tcp::v4(), 55555));
-
-        while(true) {
-            tcp::socket socket(io_context);
-            acceptor.accept(socket);
-
-            cout << "Client connected! Accepting message \n";
-
-            string hello_message = "Hello, There !! \n";
-            boost::system::error_code error;
-
-            boost::asio::write(socket, boost::asio::buffer(hello_message), error); 
-        }
-    }
-    catch (exception& e){
-        cerr << e.what() << endl;
-    }
-
+    server.Run();
     return 0;
 } 
