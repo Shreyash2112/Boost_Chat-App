@@ -1,11 +1,8 @@
-#include <iostream>
-#include <Networking/base.h>
-
+#include<iostream>
 using namespace std;
 
 int main () {
     
-    cout << "Hello Client" << endl;
-    cout << static_cast<int>(MyEnum::One) << endl;
+    cout << "helllo"  << endl;
     return 0;
 } 
