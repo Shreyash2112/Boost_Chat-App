@@ -17,6 +17,8 @@ int main () {
             tcp::socket socket(io_context);
             acceptor.accept(socket);
 
+            cout << "Client connected! Accepting message \n";
+
             string hello_message = "Hello, There !! \n";
             boost::system::error_code error;
 
