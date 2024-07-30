@@ -4,7 +4,7 @@
 namespace BCA
 {
 
-    TCPConnection::TCPConnection(boost::asio::io_context &ioContext) : _socket(ioContext)
+    TCPConnection::TCPConnection(boost::asio::ip::tcp::socket&& socket) : _socket(move(socket))
     {
     }
 

@@ -1,6 +1,4 @@
 #include <Networking/server/tcp_server.h>
-#include "tcp_server.h"
-
 
 using boost::asio::ip::tcp;
 
@@ -29,16 +27,20 @@ namespace BCA
     void TCPServer::Broadcast(const string &message)
     {
     }
+
     void TCPServer::StartAccept()
     {
         // TODO : Create a connection
-        auto connection = TCPConnection::Create(_ioContext);
 
-        _connections.push_back(connection);
+        _socket.emplace(_ioContext);
 
         // Asynchronously accept the connection
-        _acceptor.async_accept(connection->socket(), [connection, this](const boost::system::error_code &error)
-                               {
+        _acceptor.async_accept(*_socket, [this](const boost::system::error_code &error){
+            
+            auto connection = TCPConnection::Create(move(*_socket));
+
+            _connections.insert(connection);
+        
             if (!error) 
             {
                 connection->Start();
