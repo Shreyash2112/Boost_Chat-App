@@ -11,7 +11,7 @@ add_definitions(-D_WIN32_WINNT=0x0601)
 find_package(Boost 1.85.0)
 
 # Globs all Source files
-file(GLOB SOURCES src/* src/*/* src/*/*/* .cpp)
+file(GLOB_RECURSE SOURCES src/*.cpp)
 add_library(${PROJECT_NAME} ${SOURCES})
 
 target_include_directories(${PROJECT_NAME}

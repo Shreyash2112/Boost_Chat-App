@@ -4,39 +4,71 @@
 namespace BCA
 {
 
-    TCPConnection::TCPConnection(boost::asio::ip::tcp::socket&& socket) : _socket(move(socket))
-    {
+    TCPConnection::TCPConnection(boost::asio::ip::tcp::socket&& socket) : _socket(move(socket)) {
+        boost::system::error_code ec;
+
+        stringstream name;
+        name << _socket.remote_endpoint();
+
+        _username = name.str();
     }
 
-    void TCPConnection::Start()
-    {
-        auto strongThis = shared_from_this();
+    
+    void TCPConnection::Start(MessageHandler&& messageHandler, ErrorHandler&& errorHandler) {
+        _messageHandler = move(messageHandler);
+        _errorHandler = move(errorHandler);
+        asyncRead();
+    }
 
-        boost::asio::async_write(_socket, boost::asio::buffer(_message),
-                                 [strongThis](const boost::system::error_code &error, size_t bytesTransferred)
-                                 {
-                                     if (error)
-                                     {
-                                         cout << "Failed to send message! \n";
-                                     }
-                                     else
-                                     {
-                                         cout << "Sent " << bytesTransferred << " bytes of data! \n";
-                                     }
-                                 });
+    void TCPConnection::Post(const string &message) {
+        bool queueIdle = _outgoingMessages.empty();
+        _outgoingMessages.push(message);
 
-        boost::asio::streambuf buffer;
+        if (queueIdle){
+            asyncWrite();
+        }
+        
+    }
 
-        _socket.async_receive(buffer.prepare(512), [this](const boost::system::error_code &error, size_t bytesTransferred) {
-            if(error == boost::asio::error::eof) {
-                // Clean connection cut off
-                cout << "Client disconnected properly! \n";
-            }
-            else if (error)
-            {
-                cout << "Client disconnected in bad way! \n";
-            }  
+    void TCPConnection::asyncRead() {
+        boost::asio::async_read_until(_socket, _streamBuf, "\n", [self = shared_from_this()]
+        (boost::system::error_code ec, size_t bytesTransferred) {
+            self->onRead(ec, bytesTransferred);
         });
     }
 
+    void TCPConnection::onRead(boost::system::error_code ec, size_t bytesTransferred) {
+        if(ec) {
+            _socket.close(ec);
+
+            _errorHandler();
+            return;
+        }
+
+        stringstream message;
+        message << _username << ": " << istream(&_streamBuf).rdbuf();
+        _streamBuf.consume(bytesTransferred);
+
+        _messageHandler(message.str());
+        asyncRead();
+    }
+
+    void TCPConnection::asyncWrite() {
+        boost::asio::async_write(_socket, boost::asio::buffer(_outgoingMessages.front()), [self = shared_from_this()] (boost::system::error_code ec, size_t bytesTransferred) {self->onWrite(ec, bytesTransferred);});
+    }
+
+    void TCPConnection::onWrite(boost::system::error_code ec, size_t bytesTransferred) {
+        if(ec) {
+            _socket.close(ec);
+
+            _errorHandler();
+            return;
+        }
+
+        _outgoingMessages.pop();
+
+        if(!_outgoingMessages.empty()) {
+            asyncWrite();
+        }
+    }
 }

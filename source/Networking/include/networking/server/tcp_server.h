@@ -17,8 +17,11 @@ namespace BCA
         V6
     };
 
-    class TCPServer
-    {
+    class TCPServer {
+        using OnJoinHandler = function<void(TCPConnection::pointer)>;
+        using OnLeaveHandler = function<void(TCPConnection::pointer)>;
+        using OnClientMessageHandler = function<void(string)>;
+
     public:
         TCPServer(IPV ipv, int port);
         int Run();
@@ -27,6 +30,11 @@ namespace BCA
 
     private:
         void StartAccept();
+
+    public:
+        OnJoinHandler OnJoin;
+        OnLeaveHandler OnLeave;
+        OnClientMessageHandler OnClientMessage;
 
     private:
         IPV _ipVersion;

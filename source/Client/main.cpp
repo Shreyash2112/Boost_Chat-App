@@ -1,43 +1,32 @@
+#include <Networking/client/tcp_client.h>
 #include <iostream>
-#include <array>
-#include <boost/asio.hpp>
+#include <thread>
 
-using namespace std;
-using boost::asio::ip::tcp;
+using namespace BCA;
 
 int main () {
     
-    try {
-        boost::asio::io_context ioContext;
+    TCPClient client {"localhost", 55555};
 
-        tcp::resolver resolver {ioContext};
-        auto endpoints = resolver.resolve("127.0.0.1", "55555");
+    client.OnMessage = [] (const string& message) {
+        cout << message; 
+    };
 
-        tcp::socket socket {ioContext};
-        boost::asio::connect(socket, endpoints);
+    thread t{[&client] () {client.Run(); }};
 
-        while(true) {
-            // Listen for messages
-            array<char, 128> buf {};
-            boost::system::error_code error;
+    while(true) {
+        string message;
+        getline(cin, message);
 
-            size_t len = socket.read_some(boost::asio::buffer (buf), error);
+        if (message == "\\q") break;
+        message += "\n";
 
-            if(error == boost::asio::error::eof) {
-                // Clean connection cutoff
-                break;
-            }
-            else if (error) {
-                throw boost::system::system_error(error);
-            }
-
-            std::cout.write(buf.data(), len);
-        }
+        client.Post(message);
     }
 
-    catch (exception& e) {
-        cerr << e.what() << endl;
-    }
+    client.Stop();
+    t.join();
+
 
     return 0;
 } 

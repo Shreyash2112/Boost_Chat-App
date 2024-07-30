@@ -24,8 +24,10 @@ namespace BCA
         return 0;
     }
 
-    void TCPServer::Broadcast(const string &message)
-    {
+    void TCPServer::Broadcast(const string &message) {
+        for(auto& connection : _connections) {
+            connection->Post(message);
+        }
     }
 
     void TCPServer::StartAccept()
@@ -36,17 +38,25 @@ namespace BCA
 
         // Asynchronously accept the connection
         _acceptor.async_accept(*_socket, [this](const boost::system::error_code &error){
-            
             auto connection = TCPConnection::Create(move(*_socket));
 
-            _connections.insert(connection);
-        
-            if (!error) 
-            {
-                connection->Start();
+            if(OnJoin) {
+                OnJoin(connection);
             }
 
-            StartAccept(); });
-    }
+            _connections.insert(connection);
+            if (!error) {
+                connection->Start(
+                    [this] (const string& message) {if (OnClientMessage) OnClientMessage(message); },
+                    [&, weak = weak_ptr(connection)] {
+                        if (auto shared = weak.lock(); shared && _connections.erase(shared)) {
+                            if (OnLeave) OnLeave(shared);
+                        }
+                    }
+                );
+            }
 
+            StartAccept();
+        });
+    }
 }
